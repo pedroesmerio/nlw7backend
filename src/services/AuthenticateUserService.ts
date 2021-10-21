@@ -1,5 +1,5 @@
 import axios from 'axios'
-import "dotenv/config";
+import prismaClient from '../prisma'
 
 interface IAccessTokenResponse {
   access_token: string
@@ -15,7 +15,6 @@ interface IUserResponse {
 class AuthenticateUserService {
   async execute(code: string) {
     const url = "https://github.com/login/oauth/access_token";
-
       const { data: accessTokenResponse } = await axios.post<IAccessTokenResponse>(url, null, {
       params: {
         client_id: process.env.GITHUB_CLIENT_ID,
@@ -32,6 +31,26 @@ class AuthenticateUserService {
       authorization: `Bearer ${accessTokenResponse.access_token}`,
     },
     });
+
+    const { login, id, avatar_url, name } = res.data;
+
+    const user = await prismaClient.user.findFirst({
+      where: {
+        github_id: id
+      }
+    })
+
+    if (!user) {
+      await prismaClient.user.create({
+        data: {
+          github_id: id,
+          login,
+          avatar_url,
+          name
+        } 
+      });
+    }
+    })
 
     return res.data;
   }
